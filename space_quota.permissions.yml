@@ -1,0 +1,8 @@
+bypass space quota checks:
+  title: 'Bypass Space Quota Checks'
+  description: 'Allows users to bypass all configured storage quota limits on node forms.'
+  restrict access: true
+
+view space quota status:
+  title: 'View Storage Quota Status'
+  description: 'Allows users to view the dedicated quota status page.'

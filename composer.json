@@ -1,0 +1,17 @@
+{
+  "name": "francoud/space_quota",
+  "description": "Manages and restricts disk space usage for users or globally on specified fields.",
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "authors": [
+     {
+        "name": "Francesco Brunetta",
+        "email": "franco.brunetta@gmail.com"
+     }
+   ],
+
+  "require": {
+    "drupal/core": "^10.3 || ^11"
+  }
+}
+

@@ -1,0 +1,13 @@
+space_quota.settings_link:
+  title: 'Space Quota Settings'
+  description: 'Configure the maximum allowed disk space.'
+  parent: system.admin_config_content
+  menu_name: administration
+  route_name: space_quota.settings_form
+
+space_quota.status_link:
+  title: 'Disk Quota Status'
+  description: 'View disk space used globally or per user.'
+  parent: system.admin_reports
+  menu_name: administration
+  route_name: space_quota.status

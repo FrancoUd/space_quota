@@ -1,0 +1,8 @@
+name: 'Space Quota'
+type: module
+description: 'Manages and restricts disk space usage for users or globally on specified fields.'
+package: Custom
+core_version_requirement: ^10.3 || ^11
+configure: space_quota.settings_form
+
+version: '0.9'

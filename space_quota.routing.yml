@@ -1,0 +1,15 @@
+space_quota.settings_form:
+  path: '/admin/config/content/quota'
+  defaults:
+    _form: '\Drupal\space_quota\Form\QuotaSettingsForm'
+    _title: 'Space Quota Settings'
+  requirements:
+    _permission: 'administer site configuration'
+
+space_quota.status:
+  path: '/quota/status'
+  defaults:
+    _controller: '\Drupal\space_quota\Controller\QuotaController::statusPage'
+    _title: 'Disk Quota Status'
+  requirements:
+    _permission: 'view space quota status'

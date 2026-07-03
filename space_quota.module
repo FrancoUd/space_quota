@@ -1,0 +1,286 @@
+<?php
+
+/**
+ * @file
+ * Manages and restricts disk space usage per user or globally.
+ *
+ * Hooks into node forms to display warnings or disable file/image
+ * upload widgets when the configured quota threshold is reached.
+ *
+ * Changelog:
+ *   0.2 - 2025-04-17 - Initial version. Hardcoded quota. Supports image and
+ *                      attachment fields. Handles single and multi-value fields.
+ *   0.3 - 2025-12-02 - Global or per-user calculation. Body field blocking.
+ *                      Configurable max quota and calculation mode.
+ *   0.4 - 2025-12-03 - Supports any content type and field. Selectively
+ *                      disables widgets while keeping delete buttons active.
+ *                      Two permissions (view status, bypass). Configurable
+ *                      status page.
+ *   0.5 - 2026-01-01 - Warning message at configurable threshold percentage.
+ *                      Fixed quota exceeded message.
+ *   0.6 - 2026-05-19 - Full refactoring: renamed to space_quota, aligned
+ *                      function names, cleaned use statements.
+ *   0.7 - 2026-05-19 - Fixed size calculation bug in
+ *                      space_quota_format_file_size().
+ *   0.8 - 2026-05-20 - space_quota_calculate_user_storage_size() optionally
+ *                      excludes orphaned files.
+ *   0.9 - 2026-06-01 - Refined cache invalidation strategy.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Render\Element;
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Handles quota warnings and upload field blocking on node forms.
+ */
+function space_quota_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+  $config = \Drupal::config('space_quota.settings');
+
+  // Read settings from the configuration form.
+  $max_quota_mb = $config->get('max_quota_mb') ?: 10;
+  $calculation_mode = $config->get('calculation_mode') ?: 'global';
+  $allowed_content_types = $config->get('content_types') ?: [];
+  $restricted_fields = $config->get('file_fields') ?: [];
+  // Warning threshold (default 75% if not set).
+  $warning_threshold = $config->get('warning_threshold') ?: 75;
+
+  $current_user = \Drupal::currentUser();
+
+  // 1. Permission check: exit if the user can bypass quota enforcement.
+  if ($current_user->hasPermission('bypass space quota checks')) {
+    return;
+  }
+
+  // 2. Determine the content type (bundle) from the form ID.
+  $node_type = NULL;
+  $is_node_form = FALSE;
+  if (preg_match('/^node_([a-z0-9]+)_(?:edit_)?form$/', $form_id, $matches)) {
+    $node_type = $matches[1];
+    $is_node_form = TRUE;
+  }
+
+  // 3. Content type check: exit if the form is not a monitored node form.
+  if (!$is_node_form || !in_array($node_type, $allowed_content_types)) {
+    return;
+  }
+
+  // 4. Calculate used storage.
+  if ($calculation_mode === 'user_specific') {
+    $used_bytes = space_quota_calculate_user_storage_size($current_user->id());
+  }
+  else {
+    $used_bytes = space_quota_calculate_global_storage_size();
+  }
+
+  $max_bytes = $max_quota_mb * 1024 * 1024;
+  $usage_percentage = $max_bytes > 0 ? ($used_bytes / $max_bytes) * 100 : 0;
+  $quota_exceeded = $usage_percentage > 100;
+
+  // 5. Message handling and field blocking.
+  if ($quota_exceeded) {
+    $message = t('<b>You have exceeded your available disk quota: @used out of @max. To upload new files, you must first remove existing ones.</b>', [
+      '@used' => space_quota_format_file_size($used_bytes),
+      '@max' => $max_quota_mb . ' MB',
+    ]);
+
+    // 6. Iterate over restricted fields and disable upload widgets.
+    foreach ($restricted_fields as $field_name) {
+
+      // A. Disable the 'body' field (CKEditor/Textarea) if included in config.
+      if ($field_name === 'body' && isset($form['body']) && isset($form['body']['widget'][0])) {
+        $form['body']['widget'][0]['#disabled'] = TRUE;
+        $form['body']['widget'][0]['#description'] = $message;
+      }
+
+      // B. Disable standard File/Image fields (e.g. field_image, field_attachments).
+      elseif (isset($form[$field_name]) && isset($form[$field_name]['widget'])) {
+
+        // Prepend the warning message as a markup prefix.
+        $form[$field_name]['#prefix'] = '<div class="messages messages--warning space-quota-message">' . $message . '</div>';
+
+        // Iterate over all widget elements (numeric keys = individual file slots).
+        foreach (Element::children($form[$field_name]['widget']) as $key) {
+
+          if (is_numeric($key) && isset($form[$field_name]['widget'][$key])) {
+
+            $element = $form[$field_name]['widget'][$key];
+
+            // Only disable empty slots; leave loaded files enabled so the
+            // delete button remains accessible.
+            $is_file_loaded = isset($element['#default_value']['fids']) && !empty($element['#default_value']['fids']);
+
+            if (!$is_file_loaded) {
+              $form[$field_name]['widget'][$key]['#disabled'] = TRUE;
+            }
+          }
+        }
+
+        // Hide the "Add another item" button on multi-value fields.
+        if (isset($form[$field_name]['widget']['add_more'])) {
+          $form[$field_name]['widget']['add_more']['#access'] = FALSE;
+        }
+      }
+    }
+  }
+  elseif ($usage_percentage >= $warning_threshold) {
+    // Warning case: quota not yet exceeded, but threshold reached.
+    \Drupal::messenger()->addWarning(t('Warning: you are using @percent% of your available disk quota (@used out of @max MB).', [
+      '@percent' => round($usage_percentage, 1),
+      '@used' => space_quota_format_file_size($used_bytes),
+      '@max' => $max_quota_mb,
+    ]));
+  }
+}
+
+/**
+ * Calculates the total storage space used by a specific user.
+ *
+ * @param int $uid
+ *   The user ID whose storage usage should be calculated.
+ *
+ * @return int
+ *   The total size in bytes of all files owned by the user.
+ */
+function space_quota_calculate_user_storage_size($uid) {
+  $config = \Drupal::config('space_quota.settings');
+  // Default FALSE preserves backward compatibility.
+  $ignore_orphaned = $config->get('ignore_orphaned_files') ?: FALSE;
+
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $file_storage = $entity_type_manager->getStorage('file');
+
+  $query = $file_storage->getQuery()
+    ->condition('uid', $uid)
+    ->accessCheck(TRUE);
+  $file_ids = $query->execute();
+
+  if (empty($file_ids)) {
+    return 0;
+  }
+
+  $files = $file_storage->loadMultiple($file_ids);
+  $file_system = \Drupal::service('file_system');
+  $file_usage = \Drupal::service('file.usage');
+
+  $total_size = 0;
+  foreach ($files as $file) {
+    if ($file instanceof \Drupal\file\FileInterface) {
+
+      // Skip orphaned files (no recorded usages) when the option is enabled.
+      if ($ignore_orphaned) {
+        $usage = $file_usage->listUsage($file);
+        if (empty($usage)) {
+          continue;
+        }
+      }
+
+      $file_uri = $file->getFileUri();
+      $real_path = $file_system->realpath($file_uri);
+
+      if ($real_path && file_exists($real_path)) {
+        $total_size += filesize($real_path);
+      }
+    }
+  }
+
+  return $total_size;
+}
+
+/**
+ * Calculates the total storage space used across the entire site.
+ *
+ * @return int
+ *   The total size in bytes of all files on the site.
+ */
+function space_quota_calculate_global_storage_size() {
+  $config = \Drupal::config('space_quota.settings');
+  $ignore_orphaned = $config->get('ignore_orphaned_files') ?: FALSE;
+
+  $entity_type_manager = \Drupal::entityTypeManager();
+  $file_storage = $entity_type_manager->getStorage('file');
+
+  $query = $file_storage->getQuery()
+    ->accessCheck(TRUE);
+
+  $file_ids = $query->execute();
+  if (empty($file_ids)) {
+    return 0;
+  }
+
+  $files = $file_storage->loadMultiple($file_ids);
+  $file_system = \Drupal::service('file_system');
+  $file_usage = \Drupal::service('file.usage');
+
+  $total_size = 0;
+  foreach ($files as $file) {
+    if ($file instanceof \Drupal\file\FileInterface) {
+
+      // Skip orphaned files (no recorded usages) when the option is enabled.
+      if ($ignore_orphaned) {
+        $usage = $file_usage->listUsage($file);
+        if (empty($usage)) {
+          continue;
+        }
+      }
+
+      $file_uri = $file->getFileUri();
+      $real_path = $file_system->realpath($file_uri);
+      if ($real_path && file_exists($real_path)) {
+        $total_size += filesize($real_path);
+      }
+    }
+  }
+
+  return $total_size;
+}
+
+/**
+ * Formats a byte size into a human-readable string.
+ *
+ * @param int $size
+ *   Size in bytes.
+ * @param string|null $langcode
+ *   (optional) Language code for formatting.
+ *
+ * @return string
+ *   The formatted size string (e.g. "1.45 MB").
+ */
+function space_quota_format_file_size($size, $langcode = NULL) {
+  if ($size < 1024) {
+    return \Drupal::translation()->formatPlural($size, '1 byte', '@count bytes', [], ['langcode' => $langcode]);
+  }
+
+  // 'B' at index 0 aligns powers correctly: 1024^1 = KB, 1024^2 = MB, etc.
+  $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  $power = floor(log($size, 1024));
+
+  // Guard against exceeding the units array bounds.
+  $power = min($power, count($units) - 1);
+
+  $formatted_size = number_format($size / pow(1024, $power), 2, '.', ',');
+
+  return $formatted_size . ' ' . $units[$power];
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function space_quota_entity_insert(\Drupal\Core\Entity\EntityInterface $entity) {
+  // When a file entity is created, invalidate the quota cache tag.
+  if ($entity->getEntityTypeId() === 'file') {
+    \Drupal\Core\Cache\Cache::invalidateTags(['space_quota:calculated_size']);
+  }
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function space_quota_entity_delete(\Drupal\Core\Entity\EntityInterface $entity) {
+  // When a file entity is deleted, invalidate the quota cache tag.
+  if ($entity->getEntityTypeId() === 'file') {
+    \Drupal\Core\Cache\Cache::invalidateTags(['space_quota:calculated_size']);
+  }
+}
