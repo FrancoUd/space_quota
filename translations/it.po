@@ -1,0 +1,116 @@
+# Italian translation for the Space Quota module.
+# Copyright (C) 2026
+# This file is distributed under the same license as the Space Quota package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: space_quota 0.9\n"
+"POT-Creation-Date: 2026-06-11\n"
+"PO-Revision-Date: 2026-06-11\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+# --- space_quota.routing.yml ---
+
+msgid "Space Quota Settings"
+msgstr "Impostazioni Quota Spazio"
+
+msgid "Disk Quota Status"
+msgstr "Stato Quota Disco"
+
+# --- space_quota.links.menu.yml ---
+
+msgid "Configure the maximum allowed disk space."
+msgstr "Configura la dimensione massima di spazio disco permessa."
+
+msgid "View disk space used globally or per user."
+msgstr "Visualizza lo spazio occupato globalmente o dagli utenti."
+
+# --- space_quota.module: hook_form_alter messages ---
+
+msgid "<b>You have exceeded your available disk quota: @used out of @max. To upload new files, you must first remove existing ones.</b>"
+msgstr "<b>Hai superato la quota di spazio disponibile: @used su @max. Per caricare nuovi file, devi prima rimuovere quelli esistenti.</b>"
+
+msgid "Warning: you are using @percent% of your available disk quota (@used out of @max MB)."
+msgstr "Attenzione: stai utilizzando il @percent% della quota di spazio disponibile (@used su @max MB)."
+
+# --- QuotaController.php ---
+
+msgid "General Settings"
+msgstr "Impostazioni Generali"
+
+msgid "Configured Maximum Quota: <b>@maxquota MB</b>"
+msgstr "Quota massima configurata: <b>@maxquota MB</b>"
+
+msgid "Calculation Mode: <b>@mode</b>"
+msgstr "Modalità di calcolo: <b>@mode</b>"
+
+msgid "User Specific"
+msgstr "Per utente"
+
+msgid "Global for all users"
+msgstr "Globale per tutti gli utenti"
+
+msgid "Current Status"
+msgstr "Stato attuale"
+
+msgid "Used storage space: <b>@used</b> out of <b>@maxquota MB</b>."
+msgstr "Spazio disco utilizzato: <b>@used</b> su <b>@maxquota MB</b>."
+
+msgid "Usage percentage: <b>@percent %</b>"
+msgstr "Percentuale di utilizzo: <b>@percent %</b>"
+
+msgid "The displayed quota is global. The disk space limit is shared across all users."
+msgstr "La quota visualizzata è globale. Il limite di spazio disco è condiviso tra tutti gli utenti."
+
+# --- QuotaSettingsForm.php ---
+
+msgid "General Quota Settings"
+msgstr "Impostazioni Generali Quota"
+
+msgid "Maximum disk quota (MB)"
+msgstr "Quota massima di spazio disco (MB)"
+
+msgid "Quota calculation mode"
+msgstr "Modalità di calcolo della quota"
+
+msgid "Global (sum of all files uploaded by all users)"
+msgstr "Globale (somma di tutti i file di tutti gli utenti)"
+
+msgid "Per user (only files uploaded by the current user)"
+msgstr "Per utente (solo i file caricati dall'utente corrente)"
+
+msgid "Warning threshold (%)"
+msgstr "Soglia di avviso (%)"
+
+msgid "Displays a warning message when the user reaches this percentage of their quota."
+msgstr "Emette un messaggio di avviso quando l'utente raggiunge questa percentuale di occupazione."
+
+msgid "Ignore orphaned files (with 0 usages)"
+msgstr "Ignora i file \"orfani\" (con 0 utilizzi)"
+
+msgid "When enabled, files not referenced by any content will be excluded from the storage calculation without waiting for the next Cron run."
+msgstr "Se selezionato, i file scollegati dai contenuti non verranno conteggiati nel calcolo dello spazio totale, senza attendere la pulizia del Cron."
+
+msgid "Content and Field Restrictions"
+msgstr "Restrizioni di Contenuto e Campo"
+
+msgid "Content Types to Restrict"
+msgstr "Tipi di Contenuto da Limitare"
+
+msgid "File Fields to Monitor"
+msgstr "Campi File da Controllare"
+
+msgid "Include the \"body\" field if you want to disable the CKEditor when the quota is exceeded."
+msgstr "Includi il campo \"body\" se desideri bloccare l'intero editor CKEditor al superamento della quota."
+
+# --- space_quota_format_file_size() ---
+
+msgid "1 byte"
+msgstr "1 byte"
+
+msgid "@count bytes"
+msgstr "@count byte"
