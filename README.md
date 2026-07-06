@@ -47,6 +47,7 @@ composer require francoud/space_quota
    ```bash
    drush en space_quota
    ```
+
 4. Grant the appropriate permissions at `/admin/people/permissions`.
 
 ### Manual Installation
@@ -59,6 +60,28 @@ composer require francoud/space_quota
    ```
 
 3. Grant the appropriate permissions at `/admin/people/permissions`.
+
+### Translations
+
+Italian translations are not imported automatically. After enabling the module,
+import them manually via **Administration → Configuration → Regional and
+language → User interface translation → Import**
+(`/admin/config/regional/translate/import`), selecting the file
+`translations/it.po` included in the module.
+
+## Uninstallation
+
+To completely remove the module and its repository reference from your project,
+follow these steps:
+
+1. **Uninstall the module** in Drupal (via Admin UI or Drush):
+   `drush pmu space_quota -y`
+
+2. **Remove the module files** using Composer:
+   `composer remove francoud/space_quota`
+
+3. **Remove the GitHub repository reference** from your composer.json:
+   `composer config --unset repositories.space_quota`
 
 ## Configuration
 
@@ -102,17 +125,22 @@ The page at `/quota/status` displays:
 
 The page bypasses the render cache (`max-age: 0`) so values are always current.
 
-## Planned Improvements (Phase 2)
+## Known Limitations
+
+**Node revisions:** Storage usage is calculated across all node revisions, not
+only the currently published one. If a file is removed from the latest revision
+but still referenced by a previous revision, it will continue to count toward
+the quota. This is by design: those files occupy real disk space regardless of
+their revision status. To reduce disk usage from old revisions, consider
+limiting the number of revisions saved per content type.
+
+## Planned Improvements
 
 The following changes are identified for a future release to align the module
 more closely with Drupal.org publishing standards:
 
 - Rename procedural functions in `space_quota.module` to follow Drupal hook
   naming conventions consistently.
-- Add a `config/schema/space_quota.schema.yml` file for configuration schema
-  validation.
-- Add a `config/install/space_quota.settings.yml` file for default
-  configuration.
 - Introduce a dedicated service class for storage calculation logic instead of
   standalone procedural functions.
 - Add automated tests (Kernel or Functional).
@@ -121,4 +149,4 @@ more closely with Drupal.org publishing standards:
 
 - Initial development: private use, with assistance from Claude (Anthropic)
   and Gemini (Google).
-- repository:  https://github.com/francoud/space_quota 
+- Repository: https://github.com/francoud/space_quota
