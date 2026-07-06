@@ -1,0 +1,6 @@
+max_quota_mb: 10
+calculation_mode: global
+warning_threshold: 75
+ignore_orphaned_files: false
+content_types: []
+file_fields: []
