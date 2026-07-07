@@ -42,12 +42,18 @@ composer config repositories.space_quota vcs https://github.com/francoud/space_q
 composer require francoud/space_quota
 ```
 
+> **Note on package naming:** This module is currently distributed under the
+> vendor name `francoud` (`francoud/space_quota`). As a consequence, the
+> standard `composer outdated drupal/*` command will not detect updates for
+> this module. Use `composer outdated francoud/*` instead. If the module is
+> eventually published on drupal.org, the package name will change to
+> `drupal/space_quota`.
+
 3. Enable the module via **Extend** (`/admin/modules`) or with Drush:
 
    ```bash
    drush en space_quota
    ```
-
 4. Grant the appropriate permissions at `/admin/people/permissions`.
 
 ### Manual Installation
@@ -68,11 +74,8 @@ import them manually via **Administration → Configuration → Regional and
 language → User interface translation → Import**
 (`/admin/config/regional/translate/import`), selecting the file
 `translations/it.po` included in the module.
-
 ## Uninstallation
-
-To completely remove the module and its repository reference from your project,
-follow these steps:
+To completely remove the module and its repository reference from your project, follow these steps:
 
 1. **Uninstall the module** in Drupal (via Admin UI or Drush):
    `drush pmu space_quota -y`
@@ -134,7 +137,7 @@ the quota. This is by design: those files occupy real disk space regardless of
 their revision status. To reduce disk usage from old revisions, consider
 limiting the number of revisions saved per content type.
 
-## Planned Improvements
+## Planned Improvements (Phase 2)
 
 The following changes are identified for a future release to align the module
 more closely with Drupal.org publishing standards:
@@ -149,4 +152,4 @@ more closely with Drupal.org publishing standards:
 
 - Initial development: private use, with assistance from Claude (Anthropic)
   and Gemini (Google).
-- Repository: https://github.com/francoud/space_quota
+- repository:  https://github.com/francoud/space_quota 
