@@ -5,4 +5,4 @@ package: Custom
 core_version_requirement: ^10.3 || ^11
 configure: space_quota.settings_form
 
-version: '0.9'
+version: '0.9.1'
